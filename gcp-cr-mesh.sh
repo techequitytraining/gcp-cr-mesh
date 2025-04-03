@@ -51,9 +51,9 @@ sudo apt-get -qq install pv > /dev/null 2>&1
 echo 
 export SCRIPTPATH=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 
-mkdir -p `pwd`/gcp-m2c-vm > /dev/null 2>&1
-export SCRIPTNAME=gcp-m2c-vm.sh
-export PROJDIR=`pwd`/gcp-m2c-vm
+mkdir -p `pwd`/gcp-cr-mesh > /dev/null 2>&1
+export SCRIPTNAME=gcp-cr-mesh.sh
+export PROJDIR=`pwd`/gcp-cr-mesh
 
 if [ -f "$PROJDIR/.env" ]; then
     source $PROJDIR/.env
@@ -129,14 +129,6 @@ if [[ ! -z "$TRAINING_ORG_ID" ]]  &&  [[ $ORG_ID == "$TRAINING_ORG_ID" ]]; then
                     export PROJECT_ID=$(gcloud projects list --filter $GCP_PROJECT --format 'value(PROJECT_ID)' 2>/dev/null)
                 fi
             done
-            echo
-            echo "*** Create a VM to migrate using the Google Marketplace and enter the name below ***" | pv -qL 100
-            echo
-            echo "Enter the name of the virtual machine to analyze and migrate" | pv -qL 100
-            read MESH_NAME
-            echo
-            echo "Enter the name of the container machine to generate (ensure this corresponds to the log file location)" | pv -qL 100
-            read SERVICE_NAME
             gcloud iam service-accounts delete ${GCP_PROJECT}@${GCP_PROJECT}.iam.gserviceaccount.com --quiet 2>/dev/null
             sleep 2
             gcloud --project $GCP_PROJECT iam service-accounts create ${GCP_PROJECT} 2>/dev/null
@@ -331,42 +323,52 @@ start=`date +%s`
 source $PROJDIR/.env
 if [ $MODE -eq 1 ]; then
     export STEP="${STEP},2i"   
+    echo
+    echo "$ gcloud projects add-iam-policy-binding \$GCP_PROJECT --member=user:\$(gcloud config get-value core/account) --role=roles/run.developer --no-user-output-enabled # to grant role" | pv -qL 100
+    echo
+    echo "$ gcloud projects add-iam-policy-binding \$GCP_PROJECT --member=user:\$(gcloud config get-value core/account) --role=roles/iam.serviceAccountUser --no-user-output-enabled # to grant role" | pv -qL 100
+    echo
+    echo "$ gcloud projects add-iam-policy-binding \$GCP_PROJECT --member=serviceAccount:\$(gcloud projects describe $GCP_PROJECT --format=\"value(projectNumber)\")-compute@developer.gserviceaccount.com --role=roles/trafficdirector.client --no-user-output-enabled # to grant role" | pv -qL 100    
+    echo
+    echo "$ gcloud projects add-iam-policy-binding \$GCP_PROJECT --member=serviceAccount:\$(gcloud projects describe $GCP_PROJECT --format=\"value(projectNumber)\")-compute@developer.gserviceaccount.com --role=roles/cloudtrace.agent --no-user-output-enabled # to grant role" | pv -qL 100
+    echo
+    echo "$ gcloud projects add-iam-policy-binding $GCP_PROJECT --member=serviceAccount:\$(gcloud projects describe $GCP_PROJECT --format=\"value(projectNumber)\")-compute@developer.gserviceaccount.com --role=roles/run.admin --no-user-output-enabled # to grant role" | pv -qL 100
 elif [ $MODE -eq 2 ]; then
     export STEP="${STEP},2"   
     echo
-    echo "$ gcloud projects add-iam-policy-binding $GCP_PROJECT --member=user:$(gcloud config get-value core/account) --role=roles/run.developer # to grant role" | pv -qL 100
-    gcloud projects add-iam-policy-binding $GCP_PROJECT --member=user:$(gcloud config get-value core/account) --role=roles/run.developer
+    echo "$ gcloud projects add-iam-policy-binding $GCP_PROJECT --member=user:$(gcloud config get-value core/account 2>/dev/null) --role=roles/run.developer --no-user-output-enabled # to grant role" | pv -qL 100
+    gcloud projects add-iam-policy-binding $GCP_PROJECT --member=user:$(gcloud config get-value core/account 2>/dev/null) --role=roles/run.developer  --no-user-output-enabled
     echo
-    echo "$ gcloud projects add-iam-policy-binding $GCP_PROJECT --member=user:$(gcloud config get-value core/account) --role=roles/iam.serviceAccountUser # to grant role" | pv -qL 100
-    gcloud projects add-iam-policy-binding $GCP_PROJECT --member=user:$(gcloud config get-value core/account) --role=roles/iam.serviceAccountUser
+    echo "$ gcloud projects add-iam-policy-binding $GCP_PROJECT --member=user:$(gcloud config get-value core/account 2>/dev/null) --role=roles/iam.serviceAccountUser --no-user-output-enabled # to grant role" | pv -qL 100
+    gcloud projects add-iam-policy-binding $GCP_PROJECT --member=user:$(gcloud config get-value core/account 2>/dev/null) --role=roles/iam.serviceAccountUser --no-user-output-enabled
     echo
-    echo "$ gcloud projects add-iam-policy-binding $GCP_PROJECT --member=serviceAccount:$(gcloud projects describe $GCP_PROJECT --format='value(projectNumber)')-compute@developer.gserviceaccount.com --role=roles/trafficdirector.client # to grant role" | pv -qL 100    
-    gcloud projects add-iam-policy-binding $GCP_PROJECT --member=serviceAccount:$(gcloud projects describe $PROJECT_ID --format="value(projectNumber)")-compute@developer.gserviceaccount.com --role=roles/trafficdirector.client
+    echo "$ gcloud projects add-iam-policy-binding $GCP_PROJECT --member=serviceAccount:$(gcloud projects describe $GCP_PROJECT --format='value(projectNumber)')-compute@developer.gserviceaccount.com --role=roles/trafficdirector.client --no-user-output-enabled # to grant role" | pv -qL 100    
+    gcloud projects add-iam-policy-binding $GCP_PROJECT --member=serviceAccount:$(gcloud projects describe $GCP_PROJECT --format="value(projectNumber)")-compute@developer.gserviceaccount.com --role=roles/trafficdirector.client --no-user-output-enabled
     echo
-    echo "$ gcloud projects add-iam-policy-binding $GCP_PROJECT --member=serviceAccount:$(gcloud projects describe $GCP_PROJECT --format="value(projectNumber)")-compute@developer.gserviceaccount.com --role=roles/cloudtrace.agent # to grant role" | pv -qL 100
-    gcloud projects add-iam-policy-binding $GCP_PROJECT --member=serviceAccount:$(gcloud projects describe $PROJECT_ID --format="value(projectNumber)")-compute@developer.gserviceaccount.com --role=roles/cloudtrace.agent
+    echo "$ gcloud projects add-iam-policy-binding $GCP_PROJECT --member=serviceAccount:$(gcloud projects describe $GCP_PROJECT --format='value(projectNumber)')-compute@developer.gserviceaccount.com --role=roles/cloudtrace.agent --no-user-output-enabled # to grant role" | pv -qL 100
+    gcloud projects add-iam-policy-binding $GCP_PROJECT --member=serviceAccount:$(gcloud projects describe $GCP_PROJECT --format="value(projectNumber)")-compute@developer.gserviceaccount.com --role=roles/cloudtrace.agent --no-user-output-enabled
     echo
-    echo "$ gcloud projects add-iam-policy-binding $GCP_PROJECT --member=serviceAccount:$(gcloud projects describe $GCP_PROJECT --format="value(projectNumber)")-compute@developer.gserviceaccount.com --role=roles/run.admin # to grant role" | pv -qL 100
-    gcloud projects add-iam-policy-binding $GCP_PROJECT --member=serviceAccount:$(gcloud projects describe $PROJECT_ID --format="value(projectNumber)")-compute@developer.gserviceaccount.com --role=roles/run.admin
+    echo "$ gcloud projects add-iam-policy-binding $GCP_PROJECT --member=serviceAccount:$(gcloud projects describe $GCP_PROJECT --format='value(projectNumber)')-compute@developer.gserviceaccount.com --role=roles/run.admin --no-user-output-enabled # to grant role" | pv -qL 100
+    gcloud projects add-iam-policy-binding $GCP_PROJECT --member=serviceAccount:$(gcloud projects describe $GCP_PROJECT --format="value(projectNumber)")-compute@developer.gserviceaccount.com --role=roles/run.admin --no-user-output-enabled
 elif [ $MODE -eq 3 ]; then
     export STEP="${STEP},2x"   
     gcloud config set project $GCP_PROJECT > /dev/null 2>&1
     gcloud config set compute/region $GCP_REGION > /dev/null 2>&1
     echo
-    echo "$ gcloud projects remove-iam-policy-binding $GCP_PROJECT --member=user:$(gcloud config get-value core/account) --role=roles/run.developer # to delete role" | pv -qL 100
-    gcloud projects remove-iam-policy-binding $GCP_PROJECT --member=user:$(gcloud config get-value core/account) --role=roles/run.developer
+    echo "$ gcloud projects remove-iam-policy-binding $GCP_PROJECT --member=user:$(gcloud config get-value core/account 2>/dev/null) --role=roles/run.developer --no-user-output-enabled # to delete role" | pv -qL 100
+    gcloud projects remove-iam-policy-binding $GCP_PROJECT --member=user:$(gcloud config get-value core/account 2>/dev/null) --role=roles/run.developer --no-user-output-enabled
     echo
-    echo "$ gcloud projects remove-iam-policy-binding $GCP_PROJECT --member=user:$(gcloud config get-value core/account) --role=roles/iam.serviceAccountUser # to delete role" | pv -qL 100
-    gcloud projects remove-iam-policy-binding $GCP_PROJECT --member=user:$(gcloud config get-value core/account) --role=roles/iam.serviceAccountUser
+    echo "$ gcloud projects remove-iam-policy-binding $GCP_PROJECT --member=user:$(gcloud config get-value core/account 2>/dev/null) --role=roles/iam.serviceAccountUser --no-user-output-enabled # to delete role" | pv -qL 100
+    gcloud projects remove-iam-policy-binding $GCP_PROJECT --member=user:$(gcloud config get-value core/account 2>/dev/null) --role=roles/iam.serviceAccountUser --no-user-output-enabled
     echo
-    echo "$ gcloud projects remove-iam-policy-binding $GCP_PROJECT --member=serviceAccount:$(gcloud projects describe $GCP_PROJECT --format='value(projectNumber)')-compute@developer.gserviceaccount.com --role=roles/trafficdirector.client # to delete role" | pv -qL 100    
-    gcloud projects remove-iam-policy-binding $GCP_PROJECT --member=serviceAccount:$(gcloud projects describe $GCP_PROJECT --format='value(projectNumber)')-compute@developer.gserviceaccount.com --role=roles/trafficdirector.client
+    echo "$ gcloud projects remove-iam-policy-binding $GCP_PROJECT --member=serviceAccount:$(gcloud projects describe $GCP_PROJECT --format='value(projectNumber)')-compute@developer.gserviceaccount.com --role=roles/trafficdirector.client --no-user-output-enabled # to delete role" | pv -qL 100    
+    gcloud projects remove-iam-policy-binding $GCP_PROJECT --member=serviceAccount:$(gcloud projects describe $GCP_PROJECT --format='value(projectNumber)')-compute@developer.gserviceaccount.com --role=roles/trafficdirector.client --no-user-output-enabled
     echo
-    echo "$ gcloud projects remove-iam-policy-binding $GCP_PROJECT --member=serviceAccount:$(gcloud projects describe $GCP_PROJECT --format='value(projectNumber)')-compute@developer.gserviceaccount.com --role=roles/cloudtrace.agent # to delete role" | pv -qL 100
-    gcloud projects remove-iam-policy-binding $GCP_PROJECT --member=serviceAccount:$(gcloud projects describe $GCP_PROJECT --format='value(projectNumber)')-compute@developer.gserviceaccount.com --role=roles/cloudtrace.agent
+    echo "$ gcloud projects remove-iam-policy-binding $GCP_PROJECT --member=serviceAccount:$(gcloud projects describe $GCP_PROJECT --format='value(projectNumber)')-compute@developer.gserviceaccount.com --role=roles/cloudtrace.agent --no-user-output-enabled # to delete role" | pv -qL 100
+    gcloud projects remove-iam-policy-binding $GCP_PROJECT --member=serviceAccount:$(gcloud projects describe $GCP_PROJECT --format='value(projectNumber)')-compute@developer.gserviceaccount.com --role=roles/cloudtrace.agent --no-user-output-enabled
     echo
-    echo "$ gcloud projects remove-iam-policy-binding $GCP_PROJECT --member=serviceAccount:$(gcloud projects describe $GCP_PROJECT --format='value(projectNumber)')-compute@developer.gserviceaccount.com --role=roles/run.admin # to delete role" | pv -qL 100
-    gcloud projects remove-iam-policy-binding $GCP_PROJECT --member=serviceAccount:$(gcloud projects describe $GCP_PROJECT --format='value(projectNumber)')-compute@developer.gserviceaccount.com --role=roles/run.admin
+    echo "$ gcloud projects remove-iam-policy-binding $GCP_PROJECT --member=serviceAccount:$(gcloud projects describe $GCP_PROJECT --format='value(projectNumber)')-compute@developer.gserviceaccount.com --role=roles/run.admin --no-user-output-enabled # to delete role" | pv -qL 100
+    gcloud projects remove-iam-policy-binding $GCP_PROJECT --member=serviceAccount:$(gcloud projects describe $GCP_PROJECT --format='value(projectNumber)')-compute@developer.gserviceaccount.com --role=roles/run.admin --no-user-output-enabled
 else
     export STEP="${STEP},2i"   
     echo
@@ -419,7 +421,7 @@ if [ $MODE -eq 1 ]; then
     echo
     echo "$ gcloud run deploy \$SERVICE_NAME --no-allow-unauthenticated --region=\$GCP_REGION --image=\$SERVICE_IMAGE # to deploy service" | pv -qL 100
     echo
-    echo "$ gcloud run services add-iam-policy-binding \$SERVICE_NAME --region \$GCP_REGION --member=serviceAccount:\$(gcloud projects describe \$GCP_PROJECT --format=\"value(projectNumber)\")-compute@developer.gserviceaccount.com --role=roles/run.invoker # to grant role" | pv -qL 100
+    echo "$ gcloud run services add-iam-policy-binding \$SERVICE_NAME --region \$GCP_REGION --member=serviceAccount:\$(gcloud projects describe \$GCP_PROJECT --format=\"value(projectNumber)\")-compute@developer.gserviceaccount.com --role=roles/run.invoker --no-user-output-enabled # to grant role" | pv -qL 100
 elif [ $MODE -eq 2 ]; then
     export STEP="${STEP},4"   
     gcloud config set project $GCP_PROJECT > /dev/null 2>&1
@@ -428,16 +430,16 @@ elif [ $MODE -eq 2 ]; then
     echo "$ gcloud run deploy $SERVICE_NAME --no-allow-unauthenticated --region=$GCP_REGION --image=$SERVICE_IMAGE # to deploy service" | pv -qL 100
     gcloud run deploy $SERVICE_NAME --no-allow-unauthenticated --region=$GCP_REGION --image=$SERVICE_IMAGE
     echo
-    echo "$ gcloud run services add-iam-policy-binding $SERVICE_NAME --region $GCP_REGION --member=serviceAccount:$(gcloud projects describe $GCP_PROJECT --format="value(projectNumber)")-compute@developer.gserviceaccount.com --role=roles/run.invoker # to grant role" | pv -qL 100
-    gcloud run services add-iam-policy-binding $SERVICE_NAME --region $GCP_REGION --member=serviceAccount:$(gcloud projects describe $GCP_PROJECT --format="value(projectNumber)")-compute@developer.gserviceaccount.com --role=roles/run.invoker
+    echo "$ gcloud run services add-iam-policy-binding $SERVICE_NAME --region $GCP_REGION --member=serviceAccount:$(gcloud projects describe $GCP_PROJECT --format='value(projectNumber)')-compute@developer.gserviceaccount.com --role=roles/run.invoker --no-user-output-enabled # to grant role" | pv -qL 100
+    gcloud run services add-iam-policy-binding $SERVICE_NAME --region $GCP_REGION --member=serviceAccount:$(gcloud projects describe $GCP_PROJECT --format="value(projectNumber)")-compute@developer.gserviceaccount.com --role=roles/run.invoker --no-user-output-enabled
 elif [ $MODE -eq 3 ]; then
     export STEP="${STEP},4x"   
     echo
+    echo "$ gcloud run services remove-iam-policy-binding $SERVICE_NAME --region=$GCP_REGION --member=serviceAccount:$(gcloud projects describe $GCP_PROJECT --format='value(projectNumber)')-compute@developer.gserviceaccount.com --role=roles/run.invoker --no-user-output-enabled # to delete policy" | pv -qL 100
+    gcloud run services remove-iam-policy-binding $SERVICE_NAME --region=$GCP_REGION --member=serviceAccount:$(gcloud projects describe $GCP_PROJECT --format="value(projectNumber)")-compute@developer.gserviceaccount.com --role=roles/run.invoker --no-user-output-enabled
+    echo
     echo "$ gcloud --project $GCP_PROJECT run services delete ${SERVICE_NAME} --region $GCP_REGION # to delete service" | pv -qL 100
     gcloud run services delete ${SERVICE_NAME} --region=$GCP_REGION --quiet
-    echo
-    echo "$ gcloud run services remove-iam-policy-binding $SERVICE_NAME --region=$GCP_REGION --member=serviceAccount:$(gcloud projects describe $GCP_PROJECT --format=\"value(projectNumber)\")-compute@developer.gserviceaccount.com --role=roles/run.invoker --quiet # to delete policy" | pv -qL 100
-    gcloud run services remove-iam-policy-binding $SERVICE_NAME --region=$GCP_REGION --member=serviceAccount:$(gcloud projects describe $GCP_PROJECT --format="value(projectNumber)")-compute@developer.gserviceaccount.com --role=roles/run.invoker --quiet
 else
     export STEP="${STEP},4i"   
     echo
@@ -515,19 +517,19 @@ EOF
     echo "$ gcloud network-services http-routes import ${SERVICE_NAME}-route --source=$PROJDIR/http_route.yaml --location=global # to create HTTPRoute resource" | pv -qL 100
     gcloud network-services http-routes import ${SERVICE_NAME}-route --source=$PROJDIR/http_route.yaml --location=global
 elif [ $MODE -eq 3 ]; then
-    export STEP="${STEP},4x"   
+    export STEP="${STEP},5x"   
     echo
-    echo "$ gcloud compute network-endpoint-groups delete ${SERVICE_NAME}-neg --region=$GCP_REGION --quiet # to delete Network Endpoint Group" | pv -qL 100
-    gcloud compute network-endpoint-groups delete ${SERVICE_NAME}-neg --region=$GCP_REGION --quiet
-    echo
-    echo "$ gcloud compute backend-services delete ${SERVICE_NAME}-${GCP_REGION} --global --quiet # to delete Backend from the Backend Service" | pv -qL 100
-    gcloud compute backend-services delete ${SERVICE_NAME}-${GCP_REGION} --global --quiet
+    echo "$ gcloud network-services http-routes delete ${SERVICE_NAME}-route --location=global --quiet # to delete HTTP Route" | pv -qL 100
+    gcloud network-services http-routes delete ${SERVICE_NAME}-route --location=global --quiet
     echo
     echo "$ gcloud compute backend-services remove-backend ${SERVICE_NAME}-${GCP_REGION} --global --network-endpoint-group=${SERVICE_NAME}-neg --network-endpoint-group-region=$GCP_REGION --quiet # to delete Backend from the Backend Service" | pv -qL 100
     gcloud compute backend-services remove-backend ${SERVICE_NAME}-${GCP_REGION} --global --network-endpoint-group=${SERVICE_NAME}-neg --network-endpoint-group-region=$GCP_REGION --quiet
     echo
-    echo "$ gcloud network-services http-routes delete ${SERVICE_NAME}-route --location=global --quiet # to delete HTTP Route" | pv -qL 100
-    gcloud network-services http-routes delete ${SERVICE_NAME}-route --location=global --quiet
+    echo "$ gcloud compute backend-services delete ${SERVICE_NAME}-${GCP_REGION} --global --quiet # to delete Backend from the Backend Service" | pv -qL 100
+    gcloud compute backend-services delete ${SERVICE_NAME}-${GCP_REGION} --global --quiet
+    echo
+    echo "$ gcloud compute network-endpoint-groups delete ${SERVICE_NAME}-neg --region=$GCP_REGION --quiet # to delete Network Endpoint Group" | pv -qL 100
+    gcloud compute network-endpoint-groups delete ${SERVICE_NAME}-neg --region=$GCP_REGION --quiet
 else
     echo "*** Configure destination service mesh networking ***" | pv -qL 100
 fi
@@ -544,13 +546,13 @@ source $PROJDIR/.env
 if [ $MODE -eq 1 ]; then
     export STEP="${STEP},6i"   
     echo
-    echo "$ gcloud beta run deploy fortio --region=\$GCP_REGION --image=fortio/fortio --network=vps-network --subnet=vpc-subnet --mesh=\"projects/\$GCP_PROJECT/locations/global/meshes/\$MESH_NAME\" --quiet # to deploy service" | pv -qL 100
+    echo "$ gcloud beta run deploy fortio --region=\$GCP_REGION --image=fortio/fortio --network=default --subnet=default --mesh=\"projects/\$GCP_PROJECT/locations/global/meshes/\$MESH_NAME\" --quiet # to deploy service" | pv -qL 100
 elif [ $MODE -eq 2 ]; then
     export STEP="${STEP},6"   
     gcloud config set project $GCP_PROJECT > /dev/null 2>&1
     gcloud config set compute/region $GCP_REGION > /dev/null 2>&1
     echo
-    echo "$ gcloud beta run deploy fortio --region=$GCP_REGION --image=fortio/fortio --network=vps-network --subnet=vpc-subnet --mesh="projects/$GCP_PROJECT/locations/global/meshes/$MESH_NAME" --quiet # to deploy service" | pv -qL 100
+    echo "$ gcloud beta run deploy fortio --region=$GCP_REGION --image=fortio/fortio --network=default --subnet=default --mesh="projects/$GCP_PROJECT/locations/global/meshes/$MESH_NAME" --quiet # to deploy service" | pv -qL 100
     gcloud beta run deploy fortio --region=$GCP_REGION --image=fortio/fortio --network=default --subnet=default --mesh="projects/$GCP_PROJECT/locations/global/meshes/$MESH_NAME" --quiet
 elif [ $MODE -eq 3 ]; then
     export STEP="${STEP},6x"   
