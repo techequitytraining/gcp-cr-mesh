@@ -391,11 +391,11 @@ if [ $MODE -eq 1 ]; then
     gcloud config set project $GCP_PROJECT > /dev/null 2>&1
     gcloud config set compute/region $GCP_REGION > /dev/null 2>&1
     echo
-    echo "$ echo \"name: $MESH_NAME\" > mesh.yaml # to create mesh config file" | pv -qL 100
-    echo "name: $MESH_NAME" > mesh.yaml
+    echo "$ echo \"name: $MESH_NAME\" > $PROJDIR/mesh.yaml # to create mesh config file" | pv -qL 100
+    echo "name: $MESH_NAME" > $PROJDIR/mesh.yaml
     echo
-    echo "$ gcloud network-services meshes import $MESH_NAME --source=mesh.yaml --location=global # to configure mesh resource" | pv -qL 100
-    gcloud network-services meshes import $MESH_NAME --source=mesh.yaml --location=global
+    echo "$ gcloud network-services meshes import $MESH_NAME --source=$PROJDIR/mesh.yaml --location=global # to configure mesh resource" | pv -qL 100
+    gcloud network-services meshes import $MESH_NAME --source=$PROJDIR/mesh.yaml --location=global
 elif [ $MODE -eq 3 ]; then
     export STEP="${STEP},3x"
     echo
