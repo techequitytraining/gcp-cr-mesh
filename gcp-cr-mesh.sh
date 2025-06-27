@@ -60,10 +60,10 @@ if [ -f "$PROJDIR/.env" ]; then
 else
 cat <<EOF > $PROJDIR/.env
 export GCP_PROJECT=$GCP_PROJECT
-export GCP_REGION=NOT_SET
-export MESH_NAME=NOT_SET
-export SERVICE_NAME=NOT_SET
-export SERVICE_IMAGE=NOT_SET
+export GCP_REGION="us-central1"
+export MESH_NAME="mesh"
+export SERVICE_NAME="hello"
+export SERVICE_IMAGE="us-docker.pkg.dev/cloudrun/container/hello:latest"
 EOF
 source $PROJDIR/.env
 fi
